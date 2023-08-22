@@ -1,0 +1,420 @@
+--Plato's Pizza Analysis--
+-- I have been given the task to answer a series of questions related to the Plato's Pizzeria store--
+-- What are our best and worst-selling pizzas?
+-- How many pizzas are we making during peak periods?
+-- What days and times do we tend to be busiest?
+-- What's our average order value?
+
+--Cleaning Data Set--
+-- Cleaning order_date and order_time columns. 
+Select 
+order_date, 
+order_time
+Convert(date,order_date) as new_order_date
+Convert(time,order_time) as new_order_time
+From pizza_sales$
+
+Alter table pizza_sales$
+Alter column order_date date
+
+Alter table pizza_sales$
+Alter column order_time time
+
+-- Clean excess characters in order_time column.
+ Select 
+ order_time,
+ convert(time(0),order_time)
+ from pizza_sales$
+
+ Alter Table pizza_sales$
+ Alter column order_time time(0)
+
+ -- What are the best and worst selling pizzas?
+
+
+drop view if exists Pizzas_Sold_Excel
+go
+CREATE VIEW   
+Pizzas_Sold_Excel 
+as
+select 
+pizza_name, 
+sum(quantity) AS TotalSold
+from pizza_sales$
+group by pizza_name
+
+drop view if exists  Pizzas_sold
+go
+CREATE VIEW   
+Pizzas_sold 
+as
+select pizza_name, sum(quantity) AS TotalSold
+from pizza_sales$
+group by pizza_name
+
+select top 5
+pizza_name,
+Totalsold
+from Pizzas_sold
+order by 2 desc
+
+-- In the query above you can see the top 5 selling pizzas, 'The Classic Deluxe' being the best seller.
+
+select top 5
+pizza_name,
+Totalsold
+from Pizzas_sold
+order by 2 asc
+
+-- In the query above you can see the top 5 least selling pizzas, 'The Brie Carre' being the worst seller.
+
+-- How many pizzas are made during peak periods? I would say the peak times are between 5pm and 10:30pm
+
+select
+pizza_name,
+quantity,
+order_id,
+order_time,
+Case
+When order_time between '17:00:00' and '22:30:00' then 'Peak'
+else 'off-peak'
+end as Peaktimes
+from Pizza_sales$
+
+drop view if exists Peak_orders_excel
+go
+CREATE VIEW   
+Peak_orders_excel 
+as
+select
+pizza_name,
+quantity,
+order_id,
+order_time,
+Case
+When order_time between '17:00:00' and '22:30:00' then 'Peak'
+else 'off-peak'
+end as Peaktimes
+from Pizza_sales$
+
+
+select 
+count(Peaktimes) as Sold_Peak_and_offpeak
+from Peak_orders
+where Peaktimes = 'off-peak'
+UNION
+select
+count(Peaktimes) 
+from Peak_orders
+where Peaktimes = 'Peak'
+
+-- After running this query, I found out that the company sells more pizza's during off-peak times.
+-- This could be due to there being more hours available to order during off-peak times.
+-- However, at evening times (peak hours) they should be selling alot more.
+
+
+-- What days and times tend to be busiest?
+
+drop view if exists Best_Selling_Days
+go
+CREATE VIEW   
+Best_Selling_Days
+as
+Select
+distinct(order_date),
+FORMAT(order_date,'dddd') as Day_of_Week,
+SUM(quantity) AmountSold
+from pizza_sales$
+group by order_date
+
+drop view if exists SoldPerDay_Excel
+go
+CREATE VIEW   
+SoldPerDay_Excel
+as
+select 
+Day_of_Week,
+sum(AmountSold) as Total_sold_for_each_day
+from Best_Selling_Days
+group by Day_of_Week
+
+
+-- These queries show the total amount of pizza's ever sold on each specific day of the week.
+
+-- Friday // 8242 Sold
+-- Saturday // 7493 Sold
+-- Thursday // 7478 Sold
+-- Wednesday // 6946 Sold
+-- Tuesday // 6895  Sold
+-- Monday // 6485 Sold
+-- Sunday // 6035 Sold 
+
+-- Friday tends to be the busiest day in comparison to the amount of pizza's sold.
+-- Whereas Sunday is the least busiest day. 
+
+drop view if exists Amount_Sold_Per_Hour
+go
+CREATE VIEW 
+Amount_Sold_Per_Hour
+as
+Select
+order_date,
+Sum(quantity) as PizzaSold,
+order_time,
+Case
+When order_time between '9:00:00' and '9:59:59' then '9am'
+When order_time between '10:00:00' and '10:59:59' then '10am'
+When order_time between '11:00:00' and '11:59:59' then '11am'
+When order_time between '12:00:00' and '12:59:59' then '12pm'
+When order_time between '13:00:00' and '13:59:59' then '1pm'
+When order_time between '14:00:00' and '14:59:59' then '2pm'
+When order_time between '15:00:00' and '15:59:59' then '3pm'
+When order_time between '16:00:00' and '16:59:59' then '4pm'
+When order_time between '17:00:00' and '17:59:59' then '5pm'
+When order_time between '18:00:00' and '18:59:59' then '6pm'
+When order_time between '19:00:00' and '19:59:59' then '7pm'
+When order_time between '20:00:00' and '20:59:59' then '8pm'
+When order_time between '21:00:00' and '21:59:59' then '9pm'
+When order_time between '22:00:00' and '22:59:59' then '10pm'
+When order_time between '23:00:00' and '23:59:59' then '11pm'
+else 'n/a'
+End Hour_sold
+from pizza_sales$
+group by order_time, order_date
+
+drop view if exists SoldPerHour_excel
+go
+CREATE VIEW 
+SoldPerHour_excel
+as
+select
+Hour_sold,
+sum(pizzasold) as TotalPizzas
+from Amount_Sold_Per_Hour
+group by Hour_sold
+
+-- This Query tells me that between 12pm and 1pm is the hour with the most amount of pizza's sold overall with a total of '6776'
+-- Between 9am and 10am is where the least amount of pizza's are sold with the total '4'.
+
+-- What is the average order value?
+
+drop view if exists AvgOrderValue_excel
+go
+CREATE VIEW 
+AvgOrderValue_excel
+as
+select AVG(total_price) as AvergareOrderValue
+from pizza_sales$
+
+-- The average order value is $16.8.
+
+--Extra Analysis--
+
+-- Amount of revenue per pizza.
+
+drop view if exists RevPerPizza_excel
+go
+CREATE VIEW 
+RevPerPizza_excel
+as
+select
+pizza_name as PizzaName,
+sum(quantity) as AmountSold,
+sum(total_price) as TotalRevenue 
+from pizza_sales$
+group by pizza_name
+
+
+-- Total Revenue.
+
+drop view if exists TotalRev_Excel
+go
+CREATE VIEW 
+TotalRev_Excel
+as
+select
+sum(total_price) as TotalRevenue
+from pizza_sales$ 
+
+-- Average Revenue Per Day.
+
+drop view if exists RevenuePerDay
+go
+CREATE VIEW 
+RevenuePerDay
+as
+select distinct(order_date),
+sum(total_price) as Revenue
+from pizza_sales$
+group by order_date
+
+drop view if exists AvgRevPerDay_Excel
+go
+CREATE VIEW 
+AvgRevPerDay_Excel
+as
+select 
+AVG(Revenue) as AvgRevPerDay
+from RevenuePerDay
+
+
+-- Revenue per month.
+
+drop view if exists RevenuePerMonth_excel
+go
+CREATE VIEW 
+RevenuePerMonth_excel
+as
+Select 
+Month(order_date) as _Month,
+Sum(total_price) as Total_Revenue
+from pizza_sales$
+group by Month(order_date)
+
+-- Avgerage Revenue Per Month.
+
+drop view if exists AvgRevenuePerMonth_excel
+go
+CREATE VIEW 
+AvgRevenuePerMonth_excel
+as
+select 
+AVG(Total_revenue) as AvgRevPerMonth
+from RevenuePerMonth
+
+-- Revenue Per Quarter.
+
+drop view if exists RevenuePerQuarter_excel
+go
+CREATE VIEW 
+RevenuePerQuarter_excel
+as
+select 'Quarterly' as TrendType, min(order_date) as date, sum(total_price) as sales  
+from pizza_sales$ 
+group by DATEPART(quarter, order_date)  
+
+
+-- Average Revenue per Qaurter.
+
+
+drop view if exists AvgRevPerQuarter_excel
+go
+CREATE VIEW 
+AvgRevPerQuarter_excel
+as
+select AVG(Sales) as AvgRevPerQuarter
+from RevenuePerQuarter_excel
+
+-- Total Orders.
+
+drop view if exists Totalorders_excel
+go
+CREATE VIEW 
+Totalorders_excel
+as
+select 
+count(distinct(order_id)) as TotalOrders
+from pizza_sales$
+
+-- Total orders per Quarter.
+
+drop view if exists OrdersPerQaurter_excel
+go
+CREATE VIEW 
+OrdersPerQaurter_excel
+as
+select 'Quarterly' as TrendType, min(order_date) as date, count(distinct(order_id)) as Orders
+from pizza_sales$ 
+group by DATEPART(quarter, order_date)
+
+-- Avg Orders per Quarter.
+
+drop view if exists AvgOrdersPerQuarter_excel
+go
+CREATE VIEW 
+AvgOrdersPerQuarter_excel
+as
+select AVG(orders) as AvgOrdersPerQuarter
+from OrdersPerQaurter
+
+-- Avg orders per day
+
+drop view if exists OrdersPerDay_excel
+go
+CREATE VIEW 
+OrdersPerDay_excel
+as
+select 
+distinct
+order_date,
+count(Distinct(order_id)) as Orders
+from pizza_sales$
+group by order_date
+
+drop view if exists AvgOrdersPerDay_excel
+go
+CREATE VIEW 
+AvgOrdersPerDay_excel
+as
+select 
+Avg(orders) as AvgOrderPerDay
+from OrdersPerDay_excel
+
+-- Orders per month.
+
+drop view if exists OrdersPerMonth_excel
+go
+CREATE VIEW 
+OrdersPerMonth_excel
+as
+select 
+Month(order_date) as Month_Num,
+count(distinct(order_id)) as Orders
+from pizza_sales$
+group by MONTH(order_date)
+
+-- Average orders per month.
+
+drop view if exists AvgOrdersPerMonth_excel
+go
+CREATE VIEW 
+AvgOrdersPerMonth_excel
+as
+select 
+AVG(orders) as AvgOrdersPerMonth
+from OrdersPerMonth_excel
+
+-- Amount Sold of each pizza size.
+
+drop view if exists SoldPerSize_excel
+go
+CREATE VIEW 
+SoldPerSize_excel
+as
+select
+pizza_size,
+count(pizza_size) as Amountsold
+from pizza_sales$
+where pizza_size = 'S' 
+or pizza_size = 'M'
+or pizza_size = 'L'
+or pizza_size = 'XL'
+or pizza_size = 'XXL'
+group by pizza_size
+
+-- Amount Sold of each pizza Category.
+
+drop view if exists SoldPerCategory_excel
+go
+CREATE VIEW 
+SoldPerCategory_excel
+as
+select
+pizza_category,
+count(pizza_category) as AmountSold
+from pizza_sales$
+where pizza_category = 'Chicken' 
+or pizza_category = 'Classic'
+or pizza_category= 'Veggie'
+or pizza_category= 'Supreme'
+group by pizza_category    
