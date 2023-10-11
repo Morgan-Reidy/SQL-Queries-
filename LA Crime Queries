@@ -1,0 +1,143 @@
+-- Changing columns to their corresponding data types. Also removed excess 0's. 
+
+Alter Table crime_data
+Alter column [Time Occurred] time(0)
+
+Alter Table crime_data
+Alter column [Date Reported] date
+
+Alter Table crime_data
+Alter column [Date Occurred] date
+
+-- Using a CTE to count the amount of crimes occurred per each hour of the day.
+
+WITH CTE_crimesperhour as 
+(SELECT (left([Time occurred],2)) as Hour_
+FROM crime_data)
+SELECT distinct(Hour_), COUNT(*) as Crimes_per_hour
+FROM CTE_crimesperhour
+GROUP BY Hour_
+ORDER BY Crimes_per_hour desc
+
+-- Query that shows the amount of crimes committed in each area.
+
+SELECT
+Distinct([Area Name]), COUNT(*) Crimes_per_area
+FROM crime_data
+GROUP BY [Area Name]
+ORDER  by Crimes_per_area desc
+
+-- Using a CTE to list the top 10 highest committed crime types.
+
+WITH CTE_Crimetype as
+(SELECT 
+DISTINCT([Crime Code Description]), count(*) as Amount 
+FROM crime_data
+GROUP BY [Crime Code Description])
+SELECT TOP 10 [Crime Code Description], Amount
+FROM CTE_Crimetype
+ORDER BY  Amount Desc
+
+-- Using a CTE to list the top 10 lowest committed crime types.
+
+WITH CTE_Crimetype as
+(SELECT 
+DISTINCT([Crime Code Description]), count(*) as Amount 
+FROM crime_data
+GROUP BY [Crime Code Description])
+SELECT TOP 10 [Crime Code Description], Amount
+FROM CTE_Crimetype
+ORDER BY  Amount ASC
+
+-- Count of part 1 and part 2 crimes.
+
+SELECT DISTINCT([Part 1-2]), COUNT(*)
+FROM crime_data
+GROUP BY [Part 1-2]
+
+-- Top 10 highest count of victims per age.
+
+WITH CTE_Age as 
+(SELECT DISTINCT([Vict Age]), COUNT(*) as VictimAgeCount
+FROM crime_data
+GROUP BY [Vict Age])
+SELECT TOP 11 [Vict age], VictimAgeCount
+FROM CTE_Age 
+ORDER BY VictimAgeCount DESC
+
+-- Average days before a crime is reported.
+
+WITH CTE_Daydifference as
+(SELECT 
+[Date Occurred],
+[Date Reported],
+DATEDIFF(Day,[Date Occurred],[Date Reported]) as Days_Before_Reported
+from crime_data)
+Select AVG(Days_Before_Reported) AVG_Days_Before_Reported
+from CTE_Daydifference
+
+-- Top 5 amount of crimes committed based on the premises.
+
+WITH CTE_CrimesPerPremises as 
+(Select DISTINCT([Premises Description]), COUNT(*) AmountofCrimes
+FROM crime_data
+GROUP BY [Premises Description])
+SELECT TOP 5 
+[Premises Description],
+AmountofCrimes
+FROM Cte_crimesperpremises
+ORDER BY AmountofCrimes DESC
+
+-- Creating views from each query to allow easy import to Tableau
+
+CREATE VIEW CrimesPerHour
+as
+WITH CTE_crimesperhour as 
+(SELECT (left([Time occurred],2)) as Hour_
+FROM crime_data)
+SELECT distinct(Hour_), COUNT(*) as Crimes_per_hour
+FROM CTE_crimesperhour
+GROUP BY Hour_
+
+CREATE VIEW CrimesPerArea
+as
+SELECT
+Distinct([Area Name]), COUNT(*) Crimes_per_area
+FROM crime_data
+GROUP BY [Area Name]
+
+CREATE VIEW CrimesPerType
+as
+SELECT 
+DISTINCT([Crime Code Description]), count(*) as Amount 
+FROM crime_data
+GROUP BY [Crime Code Description]
+
+CREATE VIEW Part1_Part2
+as
+SELECT DISTINCT([Part 1-2]), COUNT(*) CrimeAmount
+FROM crime_data
+GROUP BY [Part 1-2]
+
+CREATE VIEW VictimAge_COUNT
+as
+SELECT DISTINCT([Vict Age]), COUNT(*) as VictimAgeCount
+FROM crime_data
+GROUP BY [Vict Age]
+
+CREATE VIEW AverageDaysBeforeReported
+as
+WITH CTE_Daydifference as
+(SELECT 
+[Date Occurred],
+[Date Reported],
+DATEDIFF(Day,[Date Occurred],[Date Reported]) as Days_Before_Reported
+from crime_data)
+Select AVG(Days_Before_Reported) AVG_Days_Before_Reported
+from CTE_Daydifference
+
+CREATE VIEW CrimesPerPremises
+as
+Select DISTINCT([Premises Description]), COUNT(*) AmountofCrimes
+FROM crime_data
+GROUP BY [Premises Description]
